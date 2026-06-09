@@ -12,3 +12,9 @@ A console-based chess game built in C# to practise object-orientated programming
 - Kingside and queenside castling
 - Pawn promotion
 - Algebraic notation support
+
+## Future Improvements
+
+- En passant
+- Move history
+- Windows Forms GUI
