@@ -14,7 +14,7 @@ namespace ChessGame
         private bool whiteLeftRookMoved = false;
         private bool whiteRightRookMoved = false;
         private bool blackLeftRookMoved = false;
-        private bool blackRightRookMoved = false;
+        private bool blackRightRookMoved = false;    
 
         public void SetUpBoard()
         {
@@ -54,6 +54,41 @@ namespace ChessGame
         public Move? FindMoveFromNotation(string input, char currentPlayer)
         { 
             input = input.Trim();
+
+            string promotionPiece = "";
+
+            if (input.Contains("="))
+            {
+                string[] promotionparts = input.Split('=');
+
+                if (promotionparts.Length != 2)
+                {
+                    return null;
+                }
+
+                input = promotionparts[0];
+                promotionPiece = promotionparts[1].ToUpper();
+            }
+
+            input = input.Replace("+", "");
+            input = input.Replace("#", "");
+
+            bool isCapture = input.Contains("x");
+
+            //handle pawn capturing notation as it is slightly different
+            char? pawnStartFile = null;
+
+            if (isCapture && char.IsLower(input[0]) && input.Length >= 4)
+            {
+                pawnStartFile = input[0];
+            }
+
+            input = input.Replace("x", "");
+
+            if (pawnStartFile != null)
+            {
+                input = input.Substring(1);
+            }
 
             if (input.Length < 2)
             {
@@ -95,6 +130,16 @@ namespace ChessGame
                         continue;
                     }
 
+                    if (pawnStartFile != null)
+                    {
+                        int requiredColumn = pawnStartFile.Value - 'a';
+
+                        if (col != requiredColumn)
+                        {
+                            continue;
+                        }
+                    }
+
                     Move possibleMove = new Move(
                         new Position(row, col),
                         destination
@@ -102,11 +147,21 @@ namespace ChessGame
 
                     string target = squares[destination.Row, destination.Column];
 
-                    if (IsSameColour(targetPiece, target))
+                    if (isCapture && target == ".")
                     {
                         continue;
                     }
 
+                    if (!isCapture && target != ".")
+                    {
+                        continue;
+                    }
+
+                    if (IsSameColour(targetPiece, target))
+                    {
+                        continue;
+                    }                    
+                    
                     if (!IsValidMove(targetPiece, possibleMove))
                     {
                         continue;
@@ -117,6 +172,7 @@ namespace ChessGame
                         continue;
                     }
 
+                    possibleMove.PromotionPiece = promotionPiece;
                     return possibleMove;
                 }
             }
@@ -217,10 +273,9 @@ namespace ChessGame
                 return false;
             }
 
-            PromotePawnIfNeeded(move.End);
+            PromotePawnIfNeeded(move);
             MarkMovedPieces(piece, move);
-            
-            
+
             return true;
         }
 
@@ -665,19 +720,40 @@ namespace ChessGame
 
 
         //pawn promotion logic
-        private void PromotePawnIfNeeded(Position position)
+        private void PromotePawnIfNeeded(Move move)
         {
-            string piece = squares[position.Row, position.Column];
+            string piece = squares[move.End.Row, move.End.Column];
 
-            if (piece == "P" && position.Row == 0)
+            if (piece != "P" && piece != "p")
             {
-                //--- for now --- auto promote to a queen
-                squares[position.Row, position.Column] = "Q";
+                return;
             }
-            else if (piece == "p" && position.Row == 7)
+
+            bool whitePromotion = piece == "P" && move.End.Row == 0;
+            bool blackPromotion = piece == "p" && move.End.Row == 7;
+
+            if (!whitePromotion && !blackPromotion)
             {
-                squares[position.Row, position.Column] = "q";
+                return; //code for if the move wasnt a promotion move
             }
+
+            string promotionPiece = move.PromotionPiece;
+
+            if (promotionPiece != "Q" &&
+                promotionPiece != "R" &&
+                promotionPiece != "B" &&
+                promotionPiece != "N")
+            {
+                promotionPiece = "Q";
+            }
+
+            if (piece == "p")
+            {
+                promotionPiece = promotionPiece.ToLower();
+            }
+
+            squares[move.End.Row, move.End.Column] = promotionPiece;
+
         }
     }
 }
